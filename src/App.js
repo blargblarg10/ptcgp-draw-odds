@@ -1,15 +1,20 @@
 import { useState, useEffect } from 'react';
+import { getAvailableCards, getCard } from './data/cards';
+import { calculateOdds } from './utils/calculations';
 import './App.css';
 
 function App() {
-  // List of available cards - add new cards here
-  const availableCards = ['Iono', 'Mars', 'Red Card'];
+  // List of available cards from cards.js
+  const availableCards = getAvailableCards();
   
   // State variables for form inputs
   const [card, setCard] = useState(availableCards[0]);
-  const [cardsInDeck, setCardsInDeck] = useState(20);
+  const [cardUser, setCardUser] = useState(getCard(availableCards[0]).affects);
+  const [cardsInDeck, setCardsInDeck] = useState(14);
   const [cardsInHand, setCardsInHand] = useState(5);
   const [uniqueCardsNeeded, setUniqueCardsNeeded] = useState(1);
+  const [opponentPoints, setOpponentPoints] = useState(1);
+  const [userPoints, setUserPoints] = useState(1);
   
   // Arrays to track remaining and in-hand counts for each unique card needed
   const [remainingInDeck, setRemainingInDeck] = useState([1]);
@@ -150,13 +155,15 @@ function App() {
   // Handle card selection and clear results
   const handleCardChange = (selectedCard) => {
     setCard(selectedCard);
+    // Update cardUser state
+    setCardUser(getCard(selectedCard).affects);
     // Clear results when card selection changes
     setResult(null);
     setDetailedResults(null);
   };
   
   // Calculate odds based on the selected card and parameters
-  const calculateOdds = () => {
+  const handleCalculateOdds = () => {
     // Check for validation errors before calculating
     for (const key in errors) {
       if (typeof errors[key] === 'string' && errors[key]) {
@@ -186,214 +193,28 @@ function App() {
       return;
     }
     
-    let worthIt = false;
-    let explanation = '';
+    // Call the calculation utility with our parameters
+    const calculationResult = calculateOdds({
+      cardName: card,
+      cardUser: cardUser,
+      cardsInDeck,
+      cardsInHand,
+      remainingInDeck,
+      inHand,
+      uniqueCardsNeeded,
+      opponentPoints,
+      userPoints
+    });
     
-    // Basic validations
-    const totalCardsAccounted = cardsInHand + cardsInDeck;
-    if (totalCardsAccounted <= 0) {
-      setResult({
-        worthIt: false,
-        explanation: 'Invalid deck/hand configuration.'
-      });
-      return;
-    }
+    // Update state with the calculation results
+    setResult({ 
+      worthIt: calculationResult.worthIt, 
+      explanation: calculationResult.explanation 
+    });
     
-    // Different calculations based on the card
-    switch(card) {
-      case 'Iono':
-        // Iono lets you draw until you have 7 cards in hand
-        const newHandSize = 7;
-        const cardsToDraw = Math.max(0, newHandSize - cardsInHand);
-        
-        if (cardsToDraw === 0) {
-          worthIt = false;
-          explanation = 'You already have 7 or more cards in hand, no need to play Iono.';
-          setDetailedResults({
-            cardName: 'Iono',
-            cardEffect: 'Draw until you have 7 cards in hand',
-            currentHandSize: cardsInHand,
-            cardsToDraw: cardsToDraw,
-            cardsInDeck: cardsInDeck,
-            odds: []
-          });
-        } else {
-          // Calculate odds for each needed card and combine them
-          let combinedOdds = 1;
-          let allCardsFound = true;
-          const cardOdds = [];
-          
-          for (let i = 0; i < uniqueCardsNeeded; i++) {
-            // Skip if already have the card in hand
-            if (inHand[i] > 0) {
-              cardOdds.push({
-                cardIndex: i + 1,
-                inHand: inHand[i],
-                remainingInDeck: remainingInDeck[i],
-                odds: 100, // 100% because it's already in hand
-                comment: 'Already in hand'
-              });
-              continue;
-            }
-            
-            // Calculate hypergeometric probability of drawing at least one of the card
-            const odds = hypergeometricProbability(
-              cardsInDeck,
-              remainingInDeck[i],
-              cardsToDraw,
-              1
-            );
-            
-            cardOdds.push({
-              cardIndex: i + 1,
-              inHand: inHand[i],
-              remainingInDeck: remainingInDeck[i],
-              odds: (odds * 100).toFixed(2),
-              comment: odds < 0.5 ? 'Less than 50% chance' : 'Good chance'
-            });
-            
-            combinedOdds *= odds;
-            if (odds < 0.5) allCardsFound = false;
-          }
-          
-          worthIt = combinedOdds > 0.5 || allCardsFound;
-          explanation = `Playing Iono will draw ${cardsToDraw} cards. `;
-          explanation += `Chance of getting needed card(s): ${(combinedOdds * 100).toFixed(2)}%. `;
-          explanation += worthIt ? 'Worth playing!' : 'Probably not worth playing.';
-          
-          setDetailedResults({
-            cardName: 'Iono',
-            cardEffect: 'Draw until you have 7 cards in hand',
-            currentHandSize: cardsInHand,
-            cardsToDraw: cardsToDraw,
-            cardsInDeck: cardsInDeck,
-            combinedOdds: (combinedOdds * 100).toFixed(2),
-            odds: cardOdds
-          });
-        }
-        break;
-        
-      case 'Mars':
-        // Mars lets you discard your hand and draw 4 new cards
-        const marsDraw = 4;
-        
-        // Calculate odds for each needed card and combine them
-        let marsOdds = 1;
-        let anyCardsInHand = false;
-        const cardOdds = [];
-        
-        // Check if any needed cards are already in hand
-        for (let i = 0; i < uniqueCardsNeeded; i++) {
-          if (inHand[i] > 0) anyCardsInHand = true;
-        }
-        
-        for (let i = 0; i < uniqueCardsNeeded; i++) {
-          const odds = hypergeometricProbability(
-            cardsInDeck,
-            remainingInDeck[i],
-            marsDraw,
-            1
-          );
-          
-          cardOdds.push({
-            cardIndex: i + 1,
-            inHand: inHand[i],
-            remainingInDeck: remainingInDeck[i],
-            odds: (odds * 100).toFixed(2),
-            willDiscard: inHand[i] > 0,
-            comment: inHand[i] > 0 ? 'Will discard from hand!' : 
-                     (odds < 0.5 ? 'Less than 50% chance' : 'Good chance')
-          });
-          
-          marsOdds *= odds;
-        }
-        
-        // If we already have needed cards in hand, be more conservative
-        worthIt = marsOdds > (anyCardsInHand ? 0.7 : 0.5);
-        explanation = `Playing Mars will discard your current hand and draw ${marsDraw} new cards. `;
-        
-        if (anyCardsInHand) {
-          explanation += 'Warning: You already have some needed cards in hand. ';
-        }
-        
-        explanation += `Chance of getting all needed cards: ${(marsOdds * 100).toFixed(2)}%. `;
-        explanation += worthIt ? 'Worth playing!' : 'Probably not worth playing.';
-        
-        setDetailedResults({
-          cardName: 'Mars',
-          cardEffect: 'Discard your hand and draw 4 new cards',
-          cardsDiscarded: cardsInHand,
-          cardsToDraw: marsDraw,
-          cardsInDeck: cardsInDeck,
-          hasCardsInHand: anyCardsInHand,
-          combinedOdds: (marsOdds * 100).toFixed(2),
-          thresholdUsed: anyCardsInHand ? '70%' : '50%',
-          odds: cardOdds
-        });
-        break;
-        
-      case 'Red Card':
-        // Red Card makes opponent discard and draw 4
-        worthIt = true; // Simplified - always good to disrupt opponent
-        explanation = 'Red Card disrupts your opponent\'s hand, generally worth playing if it fits your strategy.';
-        
-        setDetailedResults({
-          cardName: 'Red Card',
-          cardEffect: 'Your opponent discards their hand and draws 4 cards',
-          strategicValue: 'High',
-          disruptionPotential: 'Forces opponent to discard potentially valuable cards',
-          recommendation: 'Consider the game state - best played when opponent has a large or valuable hand'
-        });
-        break;
-        
-      default:
-        explanation = 'Select a card to calculate odds.';
-        setDetailedResults(null);
-    }
-    
-    setResult({ worthIt, explanation });
+    setDetailedResults(calculationResult.details);
   };
-  
-  // Hypergeometric probability function (probability of drawing at least x successes)
-  const hypergeometricProbability = (population, successes, sampleSize, minSuccesses) => {
-    // Implementation of hypergeometric distribution
-    if (sampleSize > population) return 0;
-    if (successes > population) return 0;
-    if (minSuccesses > successes) return 0;
-    if (minSuccesses > sampleSize) return 0;
-    
-    // Calculate the probability of at least minSuccesses
-    let probability = 0;
-    
-    // Sum the probabilities of drawing exactly i successes, for i from minSuccesses to min(successes, sampleSize)
-    for (let i = minSuccesses; i <= Math.min(successes, sampleSize); i++) {
-      // Calculate combinations: C(successes, i) * C(population - successes, sampleSize - i) / C(population, sampleSize)
-      const numerator = combination(successes, i) * combination(population - successes, sampleSize - i);
-      const denominator = combination(population, sampleSize);
-      probability += numerator / denominator;
-    }
-    
-    return probability;
-  };
-  
-  // Helper function for calculating combinations (n choose k)
-  const combination = (n, k) => {
-    if (k < 0 || k > n) return 0;
-    if (k === 0 || k === n) return 1;
-    
-    // Calculate using factorials
-    return factorial(n) / (factorial(k) * factorial(n - k));
-  };
-  
-  // Helper function for calculating factorial
-  const factorial = (n) => {
-    if (n === 0 || n === 1) return 1;
-    let result = 1;
-    for (let i = 2; i <= n; i++) {
-      result *= i;
-    }
-    return result;
-  };
+  // Mathematical functions moved to utils/calculations.js
   
   return (
     <div className="App">
@@ -403,23 +224,33 @@ function App() {
           <div className="form-group card-selection">
             <label>Select Card:</label>
             <div className="radio-group">
-              {availableCards.map((cardName) => (
-                <label key={cardName} className="radio-label">
-                  <input 
-                    type="radio" 
-                    name="card" 
-                    value={cardName} 
-                    checked={card === cardName}
-                    onChange={() => handleCardChange(cardName)}
-                  />
-                  <span className="radio-text">{cardName}</span>
-                </label>
-              ))}
+              {availableCards.map((cardName) => {
+                const cardType = getCard(cardName).affects;
+                return (
+                  <label key={cardName} className={`radio-label ${cardType === 'opponent' ? 'opponent-card' : ''}`}>
+                    <input 
+                      type="radio" 
+                      name="card" 
+                      value={cardName} 
+                      checked={card === cardName}
+                      onChange={() => handleCardChange(cardName)}
+                    />
+                    <span className="radio-text">{cardName}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+          
+          {/* Display card description right after selection */}
+          <div className="form-group card-description">
+            <div className="card-effect-container">
+              <p className="card-effect-text">{getCard(card).effect}</p>
             </div>
           </div>
           
           <div className="form-group">
-            <label>Cards in Deck:</label>
+            <label>{cardUser === 'opponent' ? 'Cards in Opponent\'s Deck:' : 'Cards in Deck:'}</label>
             <div className="input-container">
               <input 
                 type="number" 
@@ -433,7 +264,7 @@ function App() {
           </div>
           
           <div className="form-group">
-            <label>Cards in Hand:</label>
+            <label>{cardUser === 'opponent' ? 'Cards in Opponent\'s Hand:' : 'Cards in Hand:'}</label>
             <div className="input-container">
               <input 
                 type="number" 
@@ -466,13 +297,40 @@ function App() {
             </div>
           </div>
           
+          {/* Points input field for cards that depend on points */}
+          {getCard(card).calculationParams.points && (
+            <div className="form-group">
+              <label>
+                {getCard(card).affects === 'opponent' 
+                  ? 'Number of Opponent Points:' 
+                  : 'Number of Your Points:'}
+              </label>
+              <div className="input-container">
+                <input 
+                  type="number" 
+                  min="0" 
+                  max="2" 
+                  value={getCard(card).affects === 'opponent' ? opponentPoints : userPoints} 
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value) || 0;
+                    if (getCard(card).affects === 'opponent') {
+                      setOpponentPoints(value);
+                    } else {
+                      setUserPoints(value);
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          )}
+          
           {/* Dynamic fields based on unique cards needed */}
           {[...Array(uniqueCardsNeeded)].map((_, index) => (
             <div key={index} className="unique-card-group">
               <h3>Card {index + 1}</h3>
               
               <div className="form-group">
-                <label>Remaining in Deck:</label>
+                <label>{cardUser === 'opponent' ? 'Remaining in Deck or Hand:' : 'Remaining in Deck:'}</label>
                 <div className="input-container">
                   <input 
                     type="number" 
@@ -486,7 +344,7 @@ function App() {
               </div>
               
               <div className="form-group">
-                <label>In Hand Already:</label>
+                <label>{cardUser === 'opponent' ? 'Remaining in Deck or Hand:' : 'In Hand Already:'}</label>
                 <div className="input-container">
                   <input 
                     type="number" 
@@ -501,7 +359,7 @@ function App() {
             </div>
           ))}
           
-          <button className="calculate-button" onClick={calculateOdds}>
+          <button className="calculate-button" onClick={handleCalculateOdds}>
             Calculate
           </button>
           
@@ -521,16 +379,9 @@ function App() {
                   <span className="detail-value">{detailedResults.cardName}</span>
                 </div>
                 
-                {detailedResults.cardEffect && (
-                  <div className="detail-row">
-                    <span className="detail-label">Effect:</span>
-                    <span className="detail-value">{detailedResults.cardEffect}</span>
-                  </div>
-                )}
-                
                 {detailedResults.cardsToDraw !== undefined && (
                   <div className="detail-row">
-                    <span className="detail-label">Cards to Draw:</span>
+                    <span className="detail-label">{cardUser === 'opponent' ? 'Cards Opponent Will Draw:' : 'Cards to Draw:'}</span>
                     <span className="detail-value">{detailedResults.cardsToDraw}</span>
                   </div>
                 )}
@@ -545,7 +396,11 @@ function App() {
                 {detailedResults.hasCardsInHand && (
                   <div className="detail-row warning-row">
                     <span className="detail-label">Warning:</span>
-                    <span className="detail-value">Card(s) will be discarded from hand</span>
+                    <span className="detail-value">
+                      {cardUser === 'opponent' 
+                        ? 'Opponent will discard needed card(s)' 
+                        : 'Card(s) will be discarded from hand'}
+                    </span>
                   </div>
                 )}
                 
@@ -569,8 +424,8 @@ function App() {
                     <div className="odds-table">
                       <div className="odds-header">
                         <div>Card</div>
-                        <div>In Hand</div>
-                        <div>In Deck</div>
+                        <div>{cardUser === 'opponent' ? 'In Deck/Hand' : 'In Hand'}</div>
+                        <div>{cardUser === 'opponent' ? 'In Deck/Hand' : 'In Deck'}</div>
                         <div>Draw Chance</div>
                       </div>
                       {detailedResults.odds.map((cardOdds, index) => (
@@ -580,7 +435,13 @@ function App() {
                           <div>{cardOdds.remainingInDeck}</div>
                           <div className={parseFloat(cardOdds.odds) > 50 ? 'good-odds' : 'poor-odds'}>
                             {cardOdds.odds}%
-                            {cardOdds.willDiscard && <span className="discard-note"> (will discard)</span>}
+                            {cardOdds.willDiscard && 
+                              <span className="discard-note">
+                                {cardUser === 'opponent' 
+                                  ? ' (opponent will discard)' 
+                                  : ' (will discard)'}
+                              </span>
+                            }
                           </div>
                         </div>
                       ))}
