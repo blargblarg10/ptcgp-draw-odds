@@ -1,16 +1,6 @@
 .App {
   text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .App-header {
@@ -19,20 +9,307 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+  justify-content: flex-start;
+  padding-top: 2rem;
   color: white;
 }
 
-.App-link {
+h1 {
+  margin-bottom: 2rem;
   color: #61dafb;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+.calculator-container {
+  background-color: #333942;
+  border-radius: 10px;
+  padding: 2rem;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 600px;
+}
+
+.form-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  font-size: 1rem;
+}
+
+label {
+  flex: 1;
+  text-align: left;
+  margin-right: 1rem;
+}
+
+input, select {
+  flex: 1;
+  padding: 0.5rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 4px;
+  background-color: #444b55;
+  color: white;
+}
+
+input:focus, select:focus {
+  outline: 2px solid #61dafb;
+}
+
+/* Radio button styles */
+.card-selection {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.radio-group {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-around;
+  width: 100%;
+  margin-top: 0.5rem;
+  gap: 8px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  background-color: #444b55;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  text-align: left;
+}
+
+.radio-label:hover {
+  background-color: #505a68;
+}
+
+.radio-label input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.radio-text {
+  margin-left: 0;
+}
+
+.radio-label input:checked + .radio-text {
+  font-weight: bold;
+  color: #61dafb;
+}
+
+.radio-label:has(input:checked) {
+  background-color: #3a404b;
+  border: 1px solid #61dafb;
+}
+
+/* Input container for validation messages */
+.input-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.error-message {
+  color: #ff6b6b;
+  font-size: 0.8rem;
+  margin-top: 0.3rem;
+  text-align: left;
+}
+
+.unique-card-group {
+  background-color: #373e47;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.unique-card-group h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  color: #61dafb;
+}
+
+.calculate-button {
+  width: 100%;
+  padding: 0.8rem;
+  font-size: 1.2rem;
+  background-color: #61dafb;
+  color: #222;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-top: 1rem;
+  transition: background-color 0.2s;
+}
+
+.calculate-button:hover {
+  background-color: #4eb8e6;
+}
+
+.result {
+  margin-top: 2rem;
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: left;
+}
+
+.worth-it {
+  background-color: rgba(75, 192, 103, 0.2);
+  border: 1px solid #4bc067;
+}
+
+.not-worth-it {
+  background-color: rgba(239, 83, 80, 0.2);
+  border: 1px solid #ef5350;
+}
+
+.result h2 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1.3rem;
+}
+
+.result p {
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* Detailed Results Styles */
+.detailed-results {
+  margin-top: 2rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: #373e47;
+  border: 1px solid #4a5261;
+  text-align: left;
+}
+
+.detailed-results h2 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.3rem;
+  color: #61dafb;
+}
+
+.detailed-results h3 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.8rem;
+  font-size: 1.1rem;
+  color: #61dafb;
+}
+
+.details-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem;
+  border-radius: 4px;
+  background-color: #333942;
+}
+
+.detail-label {
+  font-weight: bold;
+  color: #e6edf3;
+}
+
+.highlight-row {
+  background-color: #2d4154;
+  border-left: 3px solid #61dafb;
+}
+
+.warning-row {
+  background-color: #4d3d3d;
+  border-left: 3px solid #ef5350;
+}
+
+.odds-table {
+  display: flex;
+  flex-direction: column;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.odds-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1.5fr;
+  background-color: #2d3239;
+  padding: 0.5rem;
+  font-weight: bold;
+  text-align: center;
+}
+
+.odds-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1.5fr;
+  padding: 0.6rem 0.5rem;
+  background-color: #333942;
+  text-align: center;
+  border-top: 1px solid #444b55;
+}
+
+.good-odds {
+  color: #4bc067;
+  font-weight: bold;
+}
+
+.poor-odds {
+  color: #ef5350;
+}
+
+.discard-note {
+  font-size: 0.8rem;
+  font-style: italic;
+  display: block;
+  margin-top: 0.2rem;
+  color: #ef5350;
+}
+
+.total-cards-error {
+  width: 100%;
+  background-color: rgba(239, 83, 80, 0.2);
+  border: 1px solid #ef5350;
+  border-radius: 4px;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+@media (max-width: 600px) {
+  .form-group {
+    flex-direction: column;
+    align-items: stretch;
   }
-  to {
-    transform: rotate(360deg);
+  
+  label {
+    margin-bottom: 0.5rem;
+    margin-right: 0;
+  }
+  
+  .radio-group {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+  
+  .radio-label {
+    margin-bottom: 0.5rem;
+    min-width: 100px;
+    flex: 1 0 auto;
+    text-align: center;
   }
 }
